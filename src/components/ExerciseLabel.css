@@ -31,11 +31,3 @@
   text-transform: uppercase;
 }
 
-/* Canvas covers the entire label so you can draw anywhere on it,
-   just like a real marker on a physical sticker. The text shows
-   through because the canvas background is transparent. */
-.exercise-tally {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-}
