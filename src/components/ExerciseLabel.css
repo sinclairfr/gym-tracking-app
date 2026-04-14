@@ -1,0 +1,38 @@
+.exercise-label {
+  background: #f9f8f4;
+  border: 0.5px solid #c8c5bb;
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  gap: 6px;
+  min-height: 54px;
+  position: relative;
+}
+
+.exercise-label::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 0.5px;
+  background: rgba(0,0,0,0.06);
+}
+
+.exercise-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 15px;
+  letter-spacing: 0.8px;
+  color: #1a1a1a;
+  line-height: 1.2;
+  white-space: pre-line;
+  flex: 0 0 auto;
+  width: 105px;
+  text-transform: uppercase;
+}
+
+.exercise-tally {
+  flex: 1;
+  height: 42px;
+  position: relative;
+}

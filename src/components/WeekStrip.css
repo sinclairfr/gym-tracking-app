@@ -1,0 +1,59 @@
+.week-strip-wrapper {
+  background: #f7f5f0;
+  border: 1px solid #ccc;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.12);
+  padding: 10px 12px 12px;
+  margin-bottom: 14px;
+}
+
+.week-strip-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: #999;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.week-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.day-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.day-letter {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 1px;
+  color: #1a1a1a;
+  line-height: 1;
+}
+
+.day-box.today .day-letter {
+  color: #1dae7a;
+}
+
+.day-square {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 2px solid #1a1a1a;
+  position: relative;
+  background: transparent;
+}
+
+.day-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
