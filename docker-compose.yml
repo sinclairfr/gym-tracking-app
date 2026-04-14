@@ -1,0 +1,9 @@
+services:
+  gym-tracker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gym-tracker
+    ports:
+      - "18080:80"
+    restart: unless-stopped
