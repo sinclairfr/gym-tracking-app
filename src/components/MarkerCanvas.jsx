@@ -79,16 +79,19 @@ function redrawAll(canvas, strokes) {
 }
 
 // Drying animation — gradually reduces opacity of last stroke from wet→dry
+// Returns a cancel function to stop the animation early.
 function animateDrying(canvas, strokes, onDone) {
-  if (!strokes.length) return;
+  if (!strokes.length) return null;
   const last = strokes[strokes.length - 1];
-  if (!last || last.erase) return;
+  if (!last || last.erase) return null;
 
   const { r, g, b } = hexToRgb(last.color);
   const duration = 800; // ms
   const start = performance.now();
+  let cancelled = false;
 
   function frame(now) {
+    if (cancelled) return;
     const t = Math.min((now - start) / duration, 1);
     // Ease out: t goes from 0→1, wetness overlay fades
     const wetOpacity = (1 - t) * 0.3;
@@ -118,6 +121,7 @@ function animateDrying(canvas, strokes, onDone) {
   }
 
   requestAnimationFrame(frame);
+  return () => { cancelled = true; };
 }
 
 export default function MarkerCanvas({ strokes, onStrokesChange, inkColor, eraseMode, style }) {
@@ -126,8 +130,17 @@ export default function MarkerCanvas({ strokes, onStrokesChange, inkColor, erase
   const currentStrokeRef = useRef(null);
   const lastPosRef = useRef({ x: 0, y: 0 });
   const pressureRef = useRef(0.5);
+  // Always holds the latest strokes so ResizeObserver doesn't use a stale closure
+  const strokesRef = useRef(strokes);
+  // Holds the cancel function for any ongoing drying animation
+  const animCancelRef = useRef(null);
 
-  // Resize canvas to match CSS size
+  // Keep strokesRef in sync
+  useEffect(() => {
+    strokesRef.current = strokes;
+  }, [strokes]);
+
+  // Resize canvas to match CSS size — uses strokesRef to avoid stale closure
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -135,7 +148,7 @@ export default function MarkerCanvas({ strokes, onStrokesChange, inkColor, erase
       const rect = canvas.getBoundingClientRect();
       canvas.width = Math.round(rect.width * DPR);
       canvas.height = Math.round(rect.height * DPR);
-      redrawAll(canvas, strokes);
+      redrawAll(canvas, strokesRef.current);
     });
     ro.observe(canvas);
     return () => ro.disconnect();
@@ -145,6 +158,22 @@ export default function MarkerCanvas({ strokes, onStrokesChange, inkColor, erase
   useEffect(() => {
     redrawAll(canvasRef.current, strokes);
   }, [strokes]);
+
+  // Non-passive touch listeners to block Android pull-to-refresh during drawing.
+  // React's synthetic onTouchStart/onTouchMove can be passive (depending on the
+  // browser/React version), so preventDefault() inside them has no effect.
+  // Attaching directly to the DOM with { passive: false } guarantees prevention.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const block = (e) => e.preventDefault();
+    canvas.addEventListener('touchstart', block, { passive: false });
+    canvas.addEventListener('touchmove', block, { passive: false });
+    return () => {
+      canvas.removeEventListener('touchstart', block);
+      canvas.removeEventListener('touchmove', block);
+    };
+  }, []);
 
   const getPos = useCallback((e) => {
     const canvas = canvasRef.current;
@@ -158,6 +187,13 @@ export default function MarkerCanvas({ strokes, onStrokesChange, inkColor, erase
 
   const onStart = useCallback((e) => {
     e.preventDefault();
+
+    // Cancel any ongoing drying animation so it doesn't erase the new stroke
+    if (animCancelRef.current) {
+      animCancelRef.current();
+      animCancelRef.current = null;
+    }
+
     drawingRef.current = true;
     const pos = getPos(e);
     lastPosRef.current = pos;
@@ -195,12 +231,13 @@ export default function MarkerCanvas({ strokes, onStrokesChange, inkColor, erase
   const onEnd = useCallback((e) => {
     if (!drawingRef.current) return;
     drawingRef.current = false;
-
-    // Trigger drying animation on last stroke
-    const allStrokes = [...strokes];
-    animateDrying(canvasRef.current, allStrokes, null);
-
     currentStrokeRef.current = null;
+
+    // Trigger drying animation; store cancel so onStart can stop it
+    const cancel = animateDrying(canvasRef.current, strokes, () => {
+      animCancelRef.current = null;
+    });
+    animCancelRef.current = cancel;
   }, [strokes]);
 
   return (
