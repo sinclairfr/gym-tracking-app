@@ -1,4 +1,4 @@
-name: Deploy on Push (Self-hosted Runner)
+name: Deploy on Push (Self-hosted Runner) - TEST
 
 on:
   push:
