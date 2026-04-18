@@ -207,6 +207,10 @@ export default function MarkerCanvas({ strokes, onStrokesChange, inkColor, erase
     };
 
     const next = [...strokes, currentStrokeRef.current];
+    console.debug('[persist-debug] onStart append stroke', {
+      existingStrokes: strokes.length,
+      nextStrokes: next.length,
+    });
     onStrokesChange(next);
   }, [eraseMode, inkColor, strokes, onStrokesChange, getPos]);
 
@@ -231,6 +235,10 @@ export default function MarkerCanvas({ strokes, onStrokesChange, inkColor, erase
   const onEnd = useCallback((e) => {
     if (!drawingRef.current) return;
     drawingRef.current = false;
+
+    const finalPoints = currentStrokeRef.current?.points?.length || 0;
+    console.debug('[persist-debug] onEnd current stroke points', { finalPoints });
+
     currentStrokeRef.current = null;
 
     // Trigger drying animation; store cancel so onStart can stop it

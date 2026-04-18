@@ -74,6 +74,14 @@ export default function App() {
   // Persist user data whenever it changes
   useEffect(() => {
     if (!session || !state) return;
+    const strokeGroups = Object.values(state.strokes || {});
+    const totalStrokes = strokeGroups.reduce((sum, group) => sum + (Array.isArray(group) ? group.length : 0), 0);
+    const lastGroup = strokeGroups[strokeGroups.length - 1] || [];
+    const lastStroke = lastGroup[lastGroup.length - 1];
+    console.debug('[persist-debug] setJson(STROKES)', {
+      totalStrokes,
+      lastStrokePoints: lastStroke?.points?.length || 0,
+    });
     setJson(KEYS.STROKES, state.strokes, session.username);
   }, [session, state?.strokes]);
 
@@ -117,6 +125,11 @@ export default function App() {
   }, []);
 
   const handleStrokesChange = useCallback((idx, newStrokes) => {
+    console.debug('[persist-debug] handleStrokesChange', {
+      exerciseIndex: idx,
+      newStrokesCount: newStrokes.length,
+      lastStrokePoints: newStrokes[newStrokes.length - 1]?.points?.length || 0,
+    });
     setState(s => {
       const hasStrokesNow = newStrokes.length > 0;
       const hadStrokesBefore = (s.strokes[idx] || []).length > 0;
