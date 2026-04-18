@@ -207,10 +207,6 @@ export default function MarkerCanvas({ strokes, onStrokesChange, inkColor, erase
     };
 
     const next = [...strokes, currentStrokeRef.current];
-    console.debug('[persist-debug] onStart append stroke', {
-      existingStrokes: strokes.length,
-      nextStrokes: next.length,
-    });
     onStrokesChange(next);
   }, [eraseMode, inkColor, strokes, onStrokesChange, getPos]);
 
@@ -236,17 +232,29 @@ export default function MarkerCanvas({ strokes, onStrokesChange, inkColor, erase
     if (!drawingRef.current) return;
     drawingRef.current = false;
 
-    const finalPoints = currentStrokeRef.current?.points?.length || 0;
-    console.debug('[persist-debug] onEnd current stroke points', { finalPoints });
+    // Commit the finalized stroke as a fresh immutable object so parent state
+    // reference changes and persistence runs with the complete points array.
+    let finalizedStrokes = strokes;
+    if (currentStrokeRef.current) {
+      const finalizedStroke = {
+        ...currentStrokeRef.current,
+        points: [...currentStrokeRef.current.points],
+      };
+      const lastStroke = strokes[strokes.length - 1];
+      finalizedStrokes = lastStroke === currentStrokeRef.current
+        ? [...strokes.slice(0, -1), finalizedStroke]
+        : [...strokes, finalizedStroke];
+      onStrokesChange(finalizedStrokes);
+    }
 
     currentStrokeRef.current = null;
 
     // Trigger drying animation; store cancel so onStart can stop it
-    const cancel = animateDrying(canvasRef.current, strokes, () => {
+    const cancel = animateDrying(canvasRef.current, finalizedStrokes, () => {
       animCancelRef.current = null;
     });
     animCancelRef.current = cancel;
-  }, [strokes]);
+  }, [strokes, onStrokesChange]);
 
   return (
     <canvas
