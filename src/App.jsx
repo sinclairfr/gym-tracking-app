@@ -64,7 +64,22 @@ export default function App() {
   }, [state.inkColor]);
 
   const handleStrokesChange = useCallback((idx, newStrokes) => {
-    setState(s => ({ ...s, strokes: { ...s.strokes, [idx]: newStrokes } }));
+    setState(s => {
+      const hasStrokesNow = newStrokes.length > 0;
+      const hadStrokesBefore = (s.strokes[idx] || []).length > 0;
+
+      const todayIdx = (new Date().getDay() + 6) % 7;
+      let weekDays = s.weekDays;
+      if (hasStrokesNow && !hadStrokesBefore) {
+        weekDays = { ...s.weekDays, [todayIdx]: true };
+      }
+
+      return {
+        ...s,
+        strokes: { ...s.strokes, [idx]: newStrokes },
+        weekDays
+      };
+    });
   }, []);
 
   const handleDayToggle = useCallback((dayIdx) => {
