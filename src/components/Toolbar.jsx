@@ -1,4 +1,4 @@
-// Toolbar — color picker, eraser, clear button, add exercise
+// Toolbar — color picker, eraser, edit mode, clear button, add exercise
 import React, { useState } from 'react';
 import './Toolbar.css';
 
@@ -10,7 +10,16 @@ const INK_COLORS = [
   { hex: '#1a1a1a', label: 'black' },
 ];
 
-export default function Toolbar({ inkColor, onColorChange, eraseMode, onEraseToggle, onClear, onAddExercise }) {
+export default function Toolbar({
+  inkColor,
+  onColorChange,
+  eraseMode,
+  onEraseToggle,
+  editMode,
+  onEditModeToggle,
+  onClear,
+  onAddExercise,
+}) {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
 
@@ -43,6 +52,12 @@ export default function Toolbar({ inkColor, onColorChange, eraseMode, onEraseTog
           >
             {eraseMode ? '✕ erase' : 'erase'}
           </button>
+          <button
+            className={`tb-btn ${editMode ? 'active edit-active' : ''}`}
+            onClick={onEditModeToggle}
+          >
+            {editMode ? '✎ editing' : 'edit'}
+          </button>
           <button className="tb-btn" onClick={() => setAdding(v => !v)}>
             + add
           </button>
@@ -51,6 +66,12 @@ export default function Toolbar({ inkColor, onColorChange, eraseMode, onEraseTog
           </button>
         </div>
       </div>
+
+      {editMode && (
+        <div className="edit-hint" role="status" aria-live="polite">
+          Edit mode enabled: click an exercise title to rename it or use delete.
+        </div>
+      )}
 
       {adding && (
         <div className="add-row">

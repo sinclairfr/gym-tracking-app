@@ -50,6 +50,7 @@ function buildInitialState(username) {
     weekDays,    // { 0: true, 1: false, ... } Mon=0
     inkColor: getJson(KEYS.INK_COLOR, '#1dae7a', username),
     eraseMode: false,
+    editMode: false,
   };
 }
 
@@ -158,6 +159,44 @@ export default function App() {
     setState(s => ({ ...s, exercises: [...s.exercises, name] }));
   }, []);
 
+  const handleEditModeToggle = useCallback(() => {
+    setState(s => ({ ...s, editMode: !s.editMode }));
+  }, []);
+
+  const handleExerciseRename = useCallback((idx, nextName) => {
+    const trimmed = nextName.trim();
+    if (!trimmed) return;
+
+    setState((s) => {
+      if (!s.exercises[idx] || s.exercises[idx] === trimmed) return s;
+      const exercises = [...s.exercises];
+      exercises[idx] = trimmed;
+      return { ...s, exercises };
+    });
+  }, []);
+
+  const handleExerciseDelete = useCallback((idx) => {
+    if (!window.confirm('Delete this exercise?')) return;
+
+    setState((s) => {
+      if (idx < 0 || idx >= s.exercises.length) return s;
+
+      const exercises = s.exercises.filter((_, i) => i !== idx);
+      const strokes = {};
+
+      Object.entries(s.strokes).forEach(([key, value]) => {
+        const numericIndex = Number(key);
+        if (numericIndex < idx) {
+          strokes[numericIndex] = value;
+        } else if (numericIndex > idx) {
+          strokes[numericIndex - 1] = value;
+        }
+      });
+
+      return { ...s, exercises, strokes };
+    });
+  }, []);
+
   if (!session || !state) {
     return (
       <div className="app">
@@ -231,6 +270,8 @@ export default function App() {
           onColorChange={handleColorChange}
           eraseMode={state.eraseMode}
           onEraseToggle={handleEraseToggle}
+          editMode={state.editMode}
+          onEditModeToggle={handleEditModeToggle}
           onClear={handleClear}
           onAddExercise={handleAddExercise}
         />
@@ -247,6 +288,9 @@ export default function App() {
                 onStrokesChange={(s) => handleStrokesChange(i, s)}
                 inkColor={state.inkColor}
                 eraseMode={state.eraseMode}
+                editMode={state.editMode}
+                onRename={(nextName) => handleExerciseRename(i, nextName)}
+                onDelete={() => handleExerciseDelete(i)}
               />
             ))}
           </div>
