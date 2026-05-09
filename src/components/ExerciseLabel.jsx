@@ -3,31 +3,7 @@ import React, { useEffect, useState } from 'react';
 import MarkerCanvas from './MarkerCanvas';
 import './ExerciseLabel.css';
 
-export default function ExerciseLabel({
-  name,
-  strokes,
-  onStrokesChange,
-  inkColor,
-  eraseMode,
-  editMode,
-  onRename,
-  onDelete,
-}) {
-  const [draftName, setDraftName] = useState(name);
-
-  useEffect(() => {
-    setDraftName(name);
-  }, [name]);
-
-  function submitRename() {
-    const trimmed = draftName.trim();
-    if (!trimmed) {
-      setDraftName(name);
-      return;
-    }
-    onRename(trimmed);
-  }
-
+export default function ExerciseLabel({ name, strokes, onStrokesChange, onStrokeEnd, inkColor, eraseMode }) {
   return (
     <div className="exercise-label">
       <div className="exercise-name-wrap">
@@ -67,6 +43,7 @@ export default function ExerciseLabel({
       <MarkerCanvas
         strokes={strokes}
         onStrokesChange={onStrokesChange}
+        onStrokeEnd={onStrokeEnd}
         inkColor={inkColor}
         eraseMode={eraseMode}
         style={{

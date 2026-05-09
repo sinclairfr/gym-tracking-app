@@ -18,7 +18,20 @@ body {
   overscroll-behavior: none;
 }
 
-/* App shell — simulates mobile frame */
+/* Loading splash */
+.app-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #999;
+}
+
+/* App shell */
 .app {
   max-width: 480px;
   margin: 0 auto;
@@ -43,18 +56,30 @@ body {
   color: #1a1a1a;
 }
 
-.app-week {
-  font-family: 'IBM Plex Mono', monospace;
+.app-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 10px;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   color: #999;
-  text-transform: uppercase;
 }
 
-/* Main content */
-.app-main {
-  flex: 1;
+.logout-btn {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: none;
+  border: 1px solid #ccc;
+  color: #aaa;
+  cursor: pointer;
+  padding: 3px 8px;
 }
+.logout-btn:hover { border-color: #999; color: #1a1a1a; }
+
+/* Main content */
+.app-main { flex: 1; }
 
 /* Label sheet */
 .label-sheet {
@@ -68,7 +93,7 @@ body {
   position: relative;
 }
 
-/* Faint horizontal lines like label paper */
+/* Faint ruled lines */
 .paper-lines {
   position: absolute;
   inset: 0;
@@ -83,7 +108,16 @@ body {
   z-index: 1;
 }
 
-/* 2-column grid of label cells */
+/* Loading indicator inside sheet */
+.data-loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #bbb;
+}
+
+/* 2-column grid */
 .label-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -101,3 +135,4 @@ body {
   color: #aaa;
   text-transform: uppercase;
 }
+

@@ -124,7 +124,7 @@ function animateDrying(canvas, strokes, onDone) {
   return () => { cancelled = true; };
 }
 
-export default function MarkerCanvas({ strokes, onStrokesChange, inkColor, eraseMode, style }) {
+export default function MarkerCanvas({ strokes, onStrokesChange, onStrokeEnd, inkColor, eraseMode, style }) {
   const canvasRef = useRef(null);
   const drawingRef = useRef(false);
   const currentStrokeRef = useRef(null);
@@ -254,7 +254,10 @@ export default function MarkerCanvas({ strokes, onStrokesChange, inkColor, erase
       animCancelRef.current = null;
     });
     animCancelRef.current = cancel;
-  }, [strokes, onStrokesChange]);
+
+    // Notify parent that a stroke is complete (for API save + auto-check)
+    if (onStrokeEnd) onStrokeEnd(strokes);
+  }, [strokes, onStrokeEnd]);
 
   return (
     <canvas

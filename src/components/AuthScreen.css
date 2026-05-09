@@ -1,0 +1,95 @@
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e8e4dc;
+  padding: 20px;
+}
+
+.auth-card {
+  background: #f7f5f0;
+  border: 1px solid #c8c5bb;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  padding: 32px 28px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.auth-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px;
+  letter-spacing: 4px;
+  color: #1a1a1a;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 20px;
+}
+
+.auth-tab {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 6px 14px 8px;
+  cursor: pointer;
+  color: #aaa;
+  margin-bottom: -1px;
+  outline: none;
+}
+
+.auth-tab.active {
+  color: #1a1a1a;
+  border-bottom-color: #1a1a1a;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-input {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  background: #fdfcf8;
+  color: #1a1a1a;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.auth-input:focus { border-color: #444; }
+
+.auth-error {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: #c0392b;
+  margin: 0;
+}
+
+.auth-submit {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 2px;
+  background: #1a1a1a;
+  color: #f7f5f0;
+  border: none;
+  padding: 11px;
+  cursor: pointer;
+  margin-top: 4px;
+  width: 100%;
+}
+
+.auth-submit:disabled { opacity: 0.45; cursor: not-allowed; }
