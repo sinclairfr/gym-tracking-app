@@ -15,7 +15,6 @@ function animateCheckFill(canvas, inkColor, checked, onDone) {
   const ctx = canvas.getContext('2d');
   const w = canvas.width;
   const h = canvas.height;
-  const lineWidth = Math.max(2 * DPR, Math.round(Math.min(w, h) * 0.14));
 
   ctx.clearRect(0, 0, w, h);
   if (!checked) {
@@ -30,9 +29,9 @@ function animateCheckFill(canvas, inkColor, checked, onDone) {
     return;
   }
 
-  ctx.strokeStyle = inkColor;
-  ctx.lineWidth = lineWidth;
-  ctx.lineCap = 'round';
+  const { r, g, b } = hexToRgb(inkColor);
+  const totalStrokes = 6 + Math.floor(Math.random() * 4);
+  let strokeIdx = 0;
 
   const strokes = Array.from({ length: totalStrokes }, (_, i) => {
     const y = h * 0.15 + (h * 0.7) * (i / (totalStrokes - 1));
@@ -117,7 +116,9 @@ function DayBox({ letter, checked, inkColor, isToday, isSelected, onClick }) {
 
   // Animate when checked state changes
   useEffect(() => {
-    drawCross(canvasRef.current, inkColor, checked);
+    if (prevChecked.current === checked) return;
+    prevChecked.current = checked;
+    animateCheckFill(canvasRef.current, inkColor, checked, null);
   }, [checked, inkColor]);
 
   return (
