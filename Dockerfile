@@ -1,18 +1,29 @@
+# ── Build React app ───────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
+# ── Production image — Express serves API + built React ───────────────────────
+FROM node:20-alpine
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN npm install --production --legacy-peer-deps
 
-COPY . .
-RUN npm run build
+COPY server/ ./server/
+COPY --from=builder /app/build ./build/
 
-FROM nginx:1.27-alpine AS runner
+RUN mkdir -p /data
 
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/build /usr/share/nginx/html
+ENV NODE_ENV=production
+ENV PORT=3001
+ENV DATA_DIR=/data
 
-EXPOSE 80
+EXPOSE 3001
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["node", "server/index.js"]
