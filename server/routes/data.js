@@ -24,6 +24,27 @@ router.post('/exercises', (req, res) => {
   res.json({ ok: true });
 });
 
+router.put('/exercises/:index', (req, res) => {
+  const idx = +req.params.index;
+  const name = req.body?.name?.trim();
+  if (!name) return res.status(400).json({ error: 'Name required' });
+  const info = db.prepare('UPDATE exercises SET name = ? WHERE user_id = ? AND position = ?')
+    .run(name, req.user.id, idx);
+  if (info.changes === 0) return res.status(404).json({ error: 'Exercise not found' });
+  res.json({ ok: true });
+});
+
+router.delete('/exercises/:index', (req, res) => {
+  const idx = +req.params.index;
+  const uid = req.user.id;
+  const info = db.prepare('DELETE FROM exercises WHERE user_id = ? AND position = ?').run(uid, idx);
+  if (info.changes === 0) return res.status(404).json({ error: 'Exercise not found' });
+  db.prepare('UPDATE exercises SET position = position - 1 WHERE user_id = ? AND position > ?').run(uid, idx);
+  db.prepare('DELETE FROM day_strokes WHERE user_id = ? AND exercise_index = ?').run(uid, idx);
+  db.prepare('UPDATE day_strokes SET exercise_index = exercise_index - 1 WHERE user_id = ? AND exercise_index > ?').run(uid, idx);
+  res.json({ ok: true });
+});
+
 // ── Week data ─────────────────────────────────────────────────────────────────
 
 router.get('/week/:weekStamp', (req, res) => {

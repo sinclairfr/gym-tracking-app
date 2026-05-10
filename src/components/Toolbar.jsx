@@ -17,6 +17,10 @@ export default function Toolbar({
   onEraseToggle,
   editMode,
   onEditModeToggle,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
   onClear,
   onAddExercise,
 }) {
@@ -51,6 +55,12 @@ export default function Toolbar({
             onClick={onEraseToggle}
           >
             {eraseMode ? '✕ erase' : 'erase'}
+          </button>
+          <button className="tb-btn" onClick={onUndo} disabled={!canUndo} title="Annuler">
+            ↩ undo
+          </button>
+          <button className="tb-btn" onClick={onRedo} disabled={!canRedo} title="Rétablir">
+            ↪ redo
           </button>
           <button
             className={`tb-btn ${editMode ? 'active edit-active' : ''}`}

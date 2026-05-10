@@ -33,6 +33,12 @@ export default function App() {
   // ── Tool state ──────────────────────────────────────────────────────────────
   const [inkColor,  setInkColor]  = useState(() => localStorage.getItem('gym_ink') || '#1dae7a');
   const [eraseMode, setEraseMode] = useState(false);
+  const [editMode,  setEditMode]  = useState(false);
+
+  // ── Undo / Redo stacks ──────────────────────────────────────────────────────
+  // Each entry: { dayIdx, exIdx, strokes } — the state *before* the action
+  const [undoStack, setUndoStack] = useState([]);
+  const [redoStack, setRedoStack] = useState([]);
 
   // ── Initial auth check ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -61,6 +67,12 @@ export default function App() {
       .then(data => { setWeekData(data.days); setDataLoading(false); })
       .catch(err  => { handleApiError(err);   setDataLoading(false); });
   }, [user, weekStamp]);
+
+  // ── Clear undo/redo when navigating weeks ───────────────────────────────────
+  useEffect(() => {
+    setUndoStack([]);
+    setRedoStack([]);
+  }, [weekStamp]);
 
   // ── Error handler ───────────────────────────────────────────────────────────
   function handleApiError(err) {
@@ -111,6 +123,11 @@ export default function App() {
 
   // ── Stroke completed → save to API + auto-check today ────────────────────────
   const handleStrokeEnd = useCallback(async (exIdx, finalStrokes) => {
+    // Push pre-stroke state to undo stack, clear redo
+    const prevStrokes = finalStrokes.slice(0, -1);
+    setUndoStack(s => [...s, { dayIdx: selectedDay, exIdx, strokes: prevStrokes }]);
+    setRedoStack([]);
+
     try {
       await api.saveStrokes(weekStamp, selectedDay, exIdx, finalStrokes);
 
@@ -128,6 +145,38 @@ export default function App() {
       }
     } catch (err) { handleApiError(err); }
   }, [weekStamp, selectedDay, isCurrentWeek, weekData]);
+
+  // ── Undo last stroke ──────────────────────────────────────────────────────────
+  const handleUndo = useCallback(async () => {
+    if (!undoStack.length) return;
+    const entry = undoStack[undoStack.length - 1];
+    const { dayIdx, exIdx, strokes: prevStrokes } = entry;
+    const currentStrokes = weekData[dayIdx]?.strokes?.[exIdx] ?? [];
+
+    setUndoStack(s => s.slice(0, -1));
+    setRedoStack(s => [...s, { dayIdx, exIdx, strokes: currentStrokes }]);
+    setWeekData(d => ({
+      ...d,
+      [dayIdx]: { ...d[dayIdx], strokes: { ...d[dayIdx]?.strokes, [exIdx]: prevStrokes } },
+    }));
+    await api.saveStrokes(weekStamp, dayIdx, exIdx, prevStrokes).catch(handleApiError);
+  }, [undoStack, weekData, weekStamp]);
+
+  // ── Redo last undone stroke ───────────────────────────────────────────────────
+  const handleRedo = useCallback(async () => {
+    if (!redoStack.length) return;
+    const entry = redoStack[redoStack.length - 1];
+    const { dayIdx, exIdx, strokes: nextStrokes } = entry;
+    const currentStrokes = weekData[dayIdx]?.strokes?.[exIdx] ?? [];
+
+    setRedoStack(s => s.slice(0, -1));
+    setUndoStack(s => [...s, { dayIdx, exIdx, strokes: currentStrokes }]);
+    setWeekData(d => ({
+      ...d,
+      [dayIdx]: { ...d[dayIdx], strokes: { ...d[dayIdx]?.strokes, [exIdx]: nextStrokes } },
+    }));
+    await api.saveStrokes(weekStamp, dayIdx, exIdx, nextStrokes).catch(handleApiError);
+  }, [redoStack, weekData, weekStamp]);
 
   // ── Day check toggle (manual) ─────────────────────────────────────────────────
   const handleDayCheck = useCallback(async (dayIdx, checked) => {
@@ -155,6 +204,24 @@ export default function App() {
     await api.addExercise(name).catch(handleApiError);
     const updated = await api.getExercises().catch(handleApiError);
     if (updated) setExercises(updated);
+  }
+
+  async function handleRenameExercise(index, newName) {
+    await api.renameExercise(index, newName).catch(handleApiError);
+    setExercises(prev => prev.map((n, i) => i === index ? newName : n));
+  }
+
+  async function handleDeleteExercise(index) {
+    if (!window.confirm(`Supprimer "${exercises[index]}" ?`)) return;
+    await api.deleteExercise(index).catch(handleApiError);
+    const [updatedEx, updatedData] = await Promise.all([
+      api.getExercises().catch(handleApiError),
+      api.getWeek(weekStamp).catch(handleApiError),
+    ]);
+    if (updatedEx) setExercises(updatedEx);
+    if (updatedData) setWeekData(updatedData.days);
+    setUndoStack([]);
+    setRedoStack([]);
   }
 
   // ── Derived data for current view ────────────────────────────────────────────
@@ -195,6 +262,12 @@ export default function App() {
           onColorChange={handleColorChange}
           eraseMode={eraseMode}
           onEraseToggle={() => setEraseMode(v => !v)}
+          editMode={editMode}
+          onEditModeToggle={() => setEditMode(v => !v)}
+          canUndo={undoStack.length > 0}
+          canRedo={redoStack.length > 0}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
           onClear={handleClear}
           onAddExercise={handleAddExercise}
         />
@@ -207,13 +280,16 @@ export default function App() {
             <div className="label-grid">
               {exercises.map((name, i) => (
                 <ExerciseLabel
-                  key={`${name}-${i}`}
+                  key={i}
                   name={name}
                   strokes={weekData[selectedDay]?.strokes?.[i] ?? []}
                   onStrokesChange={s => handleStrokesChange(i, s)}
                   onStrokeEnd={s => handleStrokeEnd(i, s)}
                   inkColor={inkColor}
                   eraseMode={eraseMode}
+                  editMode={editMode}
+                  onRename={newName => handleRenameExercise(i, newName)}
+                  onDelete={() => handleDeleteExercise(i)}
                 />
               ))}
             </div>
