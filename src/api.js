@@ -19,8 +19,10 @@ export const api = {
   register:    (username, password) => req('/auth/register', { method: 'POST', body: { username, password } }),
   login:       (username, password) => req('/auth/login',    { method: 'POST', body: { username, password } }),
 
-  getExercises: ()     => req('/exercises'),
-  addExercise:  (name) => req('/exercises', { method: 'POST', body: { name } }),
+  getExercises:    ()              => req('/exercises'),
+  addExercise:     (name)          => req('/exercises',        { method: 'POST',   body: { name } }),
+  renameExercise:  (index, name)   => req(`/exercises/${index}`, { method: 'PUT',  body: { name } }),
+  deleteExercise:  (index)         => req(`/exercises/${index}`, { method: 'DELETE' }),
 
   getWeek:  (stamp)                      => req(`/week/${stamp}`),
   saveStrokes: (stamp, day, ex, strokes) => req(`/week/${stamp}/day/${day}/strokes/${ex}`, { method: 'PUT', body: { strokes } }),

@@ -256,7 +256,7 @@ export default function MarkerCanvas({ strokes, onStrokesChange, onStrokeEnd, in
     animCancelRef.current = cancel;
 
     // Notify parent that a stroke is complete (for API save + auto-check)
-    if (onStrokeEnd) onStrokeEnd(strokes);
+    if (onStrokeEnd) onStrokeEnd(finalizedStrokes);
   }, [strokes, onStrokeEnd]);
 
   return (
