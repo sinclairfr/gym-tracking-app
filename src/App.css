@@ -78,6 +78,15 @@ body {
 }
 .logout-btn:hover { border-color: #999; color: #1a1a1a; }
 
+/* Last workout banner */
+.last-workout-banner {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #aaa;
+  margin-bottom: 12px;
+}
+
 /* Main content */
 .app-main { flex: 1; }
 

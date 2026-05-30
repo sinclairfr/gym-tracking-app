@@ -29,6 +29,7 @@ export default function App() {
   // weekData: { dayIndex: { checked: bool, strokes: { exIndex: [stroke,…] } } }
   const [weekData,  setWeekData]  = useState({});
   const [dataLoading, setDataLoading] = useState(false);
+  const [lastWorkoutDays, setLastWorkoutDays] = useState(null);
 
   // ── Tool state ──────────────────────────────────────────────────────────────
   const [inkColor,  setInkColor]  = useState(() => localStorage.getItem('gym_ink') || '#1dae7a');
@@ -51,12 +52,11 @@ export default function App() {
     setAuthLoading(false);
   }, []);
 
-  // ── Fetch exercises once per session ────────────────────────────────────────
+  // ── Fetch exercises + last workout once per session ─────────────────────────
   useEffect(() => {
     if (!user) return;
-    api.getExercises()
-      .then(setExercises)
-      .catch(handleApiError);
+    api.getExercises().then(setExercises).catch(handleApiError);
+    api.getLastWorkout().then(d => setLastWorkoutDays(d.daysAgo)).catch(() => {});
   }, [user]);
 
   // ── Fetch week data whenever user or weekStamp changes ─────────────────────
@@ -141,6 +141,7 @@ export default function App() {
             ...d,
             [today]: { ...d[today], checked: true },
           }));
+          setLastWorkoutDays(0);
         }
       }
     } catch (err) { handleApiError(err); }
@@ -181,7 +182,10 @@ export default function App() {
   // ── Day check toggle (manual) ─────────────────────────────────────────────────
   const handleDayCheck = useCallback(async (dayIdx, checked) => {
     setWeekData(d => ({ ...d, [dayIdx]: { ...d[dayIdx], checked } }));
-    try { await api.setDayCheck(weekStamp, dayIdx, checked); }
+    try {
+      await api.setDayCheck(weekStamp, dayIdx, checked);
+      api.getLastWorkout().then(d => setLastWorkoutDays(d.daysAgo)).catch(() => {});
+    }
     catch (err) { handleApiError(err); }
   }, [weekStamp]);
 
@@ -242,6 +246,16 @@ export default function App() {
           <button className="logout-btn" onClick={handleLogout}>déco</button>
         </div>
       </header>
+
+      {lastWorkoutDays !== null && (
+        <div className="last-workout-banner">
+          {lastWorkoutDays === 0
+            ? 'worked out today'
+            : lastWorkoutDays === 1
+              ? 'last workout: yesterday'
+              : `last workout: ${lastWorkoutDays} days ago`}
+        </div>
+      )}
 
       <main className="app-main">
         <WeekStrip

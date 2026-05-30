@@ -101,4 +101,27 @@ router.put('/week/:weekStamp/day/:day/check', (req, res) => {
   res.json({ ok: true });
 });
 
+// Most recent checked day for the authenticated user
+router.get('/last-workout', (req, res) => {
+  const row = db
+    .prepare('SELECT week_stamp, day_index FROM day_checks WHERE user_id = ? ORDER BY week_stamp DESC, day_index DESC LIMIT 1')
+    .get(req.user.id);
+
+  if (!row) return res.json({ daysAgo: null });
+
+  const [yearStr, weekStr] = row.week_stamp.split('-W');
+  const year = parseInt(yearStr, 10);
+  const week = parseInt(weekStr, 10);
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - ((jan4.getUTCDay() + 6) % 7) + (week - 1) * 7);
+  monday.setUTCDate(monday.getUTCDate() + row.day_index);
+
+  const today = new Date();
+  const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+  const daysAgo = Math.round((todayUTC - monday) / 86400000);
+
+  res.json({ daysAgo });
+});
+
 module.exports = router;
