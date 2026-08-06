@@ -24,6 +24,8 @@ export const api = {
   renameExercise:  (index, name)   => req(`/exercises/${index}`, { method: 'PUT',  body: { name } }),
   deleteExercise:  (index)         => req(`/exercises/${index}`, { method: 'DELETE' }),
 
+  getLastWorkout: ()                      => req('/last-workout'),
+
   getWeek:  (stamp)                      => req(`/week/${stamp}`),
   saveStrokes: (stamp, day, ex, strokes) => req(`/week/${stamp}/day/${day}/strokes/${ex}`, { method: 'PUT', body: { strokes } }),
   setDayCheck: (stamp, day, checked)     => req(`/week/${stamp}/day/${day}/check`,         { method: 'PUT', body: { checked } }),
