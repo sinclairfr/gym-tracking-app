@@ -1,87 +1,118 @@
 .rest-timer {
   background: #f7f5f0;
-  border: 1px solid #ccc;
-  box-shadow: 0 1px 6px rgba(0,0,0,0.1);
-  padding: 10px 12px;
+  border: 1px solid #d8d4c8;
+  border-left: 3px solid #d8d4c8;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  padding: 12px 14px;
   margin-bottom: 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
-.rest-timer.running { border-color: #1dae7a; box-shadow: 0 0 0 1px #1dae7a; }
-.rest-timer.done { border-color: #c0392b; box-shadow: 0 0 0 1px #c0392b; }
+/* Running / finished states are signalled with a calm left accent + digit
+   colour — no loud full-card frame. */
+.rest-timer.running { border-left-color: #1dae7a; }
+.rest-timer.done    { border-left-color: #e08a1e; }
 
 .rt-main {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
 }
 
 .rt-label {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 10px;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   text-transform: uppercase;
-  color: #666;
+  color: #a8a196;
 }
 
 .rt-display {
   font-family: 'Bebas Neue', 'IBM Plex Mono', monospace;
-  font-size: 34px;
+  font-size: 40px;
   line-height: 1;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   color: #1a1a1a;
   font-variant-numeric: tabular-nums;
-  min-width: 92px;
+  transition: color 0.2s;
 }
 
 .rest-timer.running .rt-display { color: #1dae7a; }
-.rest-timer.done .rt-display { color: #c0392b; }
+.rest-timer.done    .rt-display { color: #e08a1e; }
+
+/* ── Controls ─────────────────────────────────────────────────────────────── */
 
 .rt-controls {
   display: flex;
+  align-items: center;
   gap: 6px;
   margin-left: auto;
 }
 
 .rt-btn {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 13px;
-  min-width: 32px;
-  padding: 6px 8px;
-  border: 1px solid #444;
-  background: transparent;
+  font-size: 15px;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbc6ba;
+  background: #fffefb;
   color: #1a1a1a;
   cursor: pointer;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s, border-color 0.12s, transform 0.08s, opacity 0.12s;
 }
 
-.rt-btn:active,
-.rt-btn.active { background: #1a1a1a; color: #f7f5f0; }
+.rt-btn:hover { background: #f0ece2; }
+.rt-btn:active { transform: scale(0.94); }
+.rt-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+.rt-btn:disabled:hover { background: #fffefb; }
 
-.rt-play.active { background: #1dae7a; border-color: #1dae7a; }
+/* Play/pause — the primary action, filled with the ink accent. */
+.rt-play {
+  font-size: 14px;
+  background: #1dae7a;
+  border-color: #1dae7a;
+  color: #fff;
+}
+.rt-play:hover { background: #189267; border-color: #189267; }
+.rt-play.active { background: #189267; border-color: #189267; }
 
-.rt-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+/* Sound toggle — subtle, never a heavy black block. */
+.rt-sound { font-size: 16px; }
+.rt-sound.on  { border-color: #1dae7a; }
+.rt-sound.off { opacity: 0.55; }
+
+/* ── Presets ──────────────────────────────────────────────────────────────── */
 
 .rt-presets {
   display: flex;
-  gap: 6px;
+  gap: 0;
+  border: 1px solid #cbc6ba;
+  width: fit-content;
+  overflow: hidden;
 }
 
 .rt-preset {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  padding: 5px 10px;
-  border: 1px solid #aaa;
-  background: transparent;
-  color: #1a1a1a;
+  padding: 7px 16px;
+  border: none;
+  border-right: 1px solid #cbc6ba;
+  background: #fffefb;
+  color: #6a655c;
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
 }
 
-.rt-preset.selected { background: #1a1a1a; color: #f7f5f0; border-color: #1a1a1a; }
+.rt-preset:last-child { border-right: none; }
+.rt-preset:hover { background: #f0ece2; }
+.rt-preset.selected { background: #1a1a1a; color: #f7f5f0; }
 .rt-preset:disabled { opacity: 0.4; cursor: not-allowed; }
+.rt-preset:disabled:hover { background: #fffefb; }
