@@ -205,8 +205,12 @@ export default function App() {
     if (!window.confirm('Effacer tous les traits de ce jour ?')) return;
     const day = selectedDay;
     const saves = exercises.map((_, i) => api.saveStrokes(weekStamp, day, i, []));
+    // Clearing every mark of a day also unchecks its box in the week strip —
+    // an empty day is no longer a completed session.
+    if (weekData[day]?.checked) saves.push(api.setDayCheck(weekStamp, day, false));
     await Promise.all(saves).catch(handleApiError);
-    setWeekData(d => ({ ...d, [day]: { ...d[day], strokes: {} } }));
+    setWeekData(d => ({ ...d, [day]: { ...d[day], strokes: {}, checked: false } }));
+    refreshLastWorkout();
   }
 
   async function handleAddExercise(name) {

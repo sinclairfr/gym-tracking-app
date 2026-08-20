@@ -9,7 +9,9 @@
 html, body, #root {
   height: 100%;
   width: 100%;
+  max-width: 100%;
   overscroll-behavior: none;
+  overflow-x: hidden; /* never let a stray wide element skew the layout */
 }
 
 body {
