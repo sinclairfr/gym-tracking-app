@@ -20,35 +20,54 @@ function loadDefault() {
   return DEFAULT_SECONDS;
 }
 
-// Short beep + vibration when the countdown reaches zero.
-function ring() {
-  try {
-    if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.65);
-    osc.onended = () => ctx.close();
-  } catch { /* audio not available */ }
-}
-
 export default function RestTimer() {
   const [duration, setDuration] = useState(loadDefault);   // configured length (s)
   const [remaining, setRemaining] = useState(loadDefault); // seconds left
   const [running, setRunning] = useState(false);
+  const [soundOn, setSoundOn] = useState(() => localStorage.getItem('gym_timer_sound') !== 'off');
   const intervalRef = useRef(null);
+  const audioCtxRef = useRef(null);
 
   // Persist the chosen default so it survives reloads.
   useEffect(() => { localStorage.setItem('gym_timer_secs', String(duration)); }, [duration]);
+  useEffect(() => { localStorage.setItem('gym_timer_sound', soundOn ? 'on' : 'off'); }, [soundOn]);
+
+  // Create/resume the AudioContext. Must run inside a user gesture (the play
+  // button) so mobile browsers — iOS in particular — actually allow sound.
+  const ensureAudio = useCallback(() => {
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      if (!audioCtxRef.current) audioCtxRef.current = new Ctx();
+      if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume();
+      return audioCtxRef.current;
+    } catch { return null; }
+  }, []);
+
+  // Beep + vibrate when the countdown reaches zero.
+  const ring = useCallback(() => {
+    if (navigator.vibrate) { try { navigator.vibrate([160, 70, 160]); } catch { /* ignore */ } }
+    if (!soundOn) return;
+    const ctx = audioCtxRef.current;
+    if (!ctx) return;
+    try {
+      if (ctx.state === 'suspended') ctx.resume();
+      // Three short rising beeps.
+      [0, 0.22, 0.44].forEach((offset, i) => {
+        const t = ctx.currentTime + offset;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 660 + i * 220;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.2);
+      });
+    } catch { /* audio not available */ }
+  }, [soundOn]);
 
   const stop = useCallback(() => {
     if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
@@ -59,6 +78,7 @@ export default function RestTimer() {
 
   const start = useCallback(() => {
     if (running) return;
+    ensureAudio(); // unlock audio while we're inside the click handler
     setRemaining(r => (r <= 0 ? duration : r));
     setRunning(true);
     intervalRef.current = setInterval(() => {
@@ -73,7 +93,7 @@ export default function RestTimer() {
         return r - 1;
       });
     }, 1000);
-  }, [running, duration]);
+  }, [running, duration, ensureAudio, ring]);
 
   function toggle() { running ? stop() : start(); }
 
@@ -109,6 +129,14 @@ export default function RestTimer() {
           </button>
           <button className="rt-btn rt-adjust" onClick={() => adjust(STEP)} disabled={running} aria-label="plus 15s">+</button>
           <button className="rt-btn" onClick={reset} aria-label="réinitialiser">↺</button>
+          <button
+            className={`rt-btn rt-sound ${soundOn ? 'active' : ''}`}
+            onClick={() => { setSoundOn(v => !v); ensureAudio(); }}
+            aria-label={soundOn ? 'couper le son' : 'activer le son'}
+            title={soundOn ? 'son activé' : 'son coupé'}
+          >
+            {soundOn ? '🔔' : '🔕'}
+          </button>
         </div>
       </div>
       <div className="rt-presets">

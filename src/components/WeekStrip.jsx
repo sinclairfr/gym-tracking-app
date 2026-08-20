@@ -11,7 +11,27 @@ function hexToRgb(hex) {
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 }
 
-function animateCheckFill(canvas, inkColor, checked, onDone) {
+// Paint a static filled box immediately (no animation) — used when a box is
+// already checked on load or after navigating onto a checked day.
+function paintStatic(canvas, inkColor) {
+  const ctx = canvas.getContext('2d');
+  const { r, g, b } = hexToRgb(inkColor);
+  const w = canvas.width, h = canvas.height;
+  const total = 7;
+  ctx.clearRect(0, 0, w, h);
+  for (let i = 0; i < total; i++) {
+    const y = h * 0.15 + (h * 0.7) * (i / (total - 1));
+    ctx.strokeStyle = `rgba(${r},${g},${b},0.88)`;
+    ctx.lineWidth = h / (total * 0.88);
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(w * 0.13, y); ctx.lineTo(w * 0.87, y); ctx.stroke();
+  }
+}
+
+// `alive` lets a running animation abort as soon as the box is reused for
+// another week/day — canvases are shared per column (stable key), so a stale
+// animation must never keep painting onto a box that has since changed.
+function animateCheckFill(canvas, inkColor, checked, alive, onDone) {
   const ctx = canvas.getContext('2d');
   const w = canvas.width;
   const h = canvas.height;
@@ -20,6 +40,7 @@ function animateCheckFill(canvas, inkColor, checked, onDone) {
   if (!checked) {
     let progress = 0;
     const step = () => {
+      if (!alive()) return;
       progress += 0.12;
       ctx.clearRect(0, 0, w, h);
       if (progress < 1) requestAnimationFrame(step);
@@ -43,9 +64,11 @@ function animateCheckFill(canvas, inkColor, checked, onDone) {
   });
 
   function drawNextStroke() {
+    if (!alive()) return;
     if (strokeIdx >= strokes.length) {
       let wet = 0.4;
       const dry = () => {
+        if (!alive()) return;
         wet -= 0.025;
         ctx.clearRect(0, 0, w, h);
         for (const s of strokes) {
@@ -72,6 +95,7 @@ function animateCheckFill(canvas, inkColor, checked, onDone) {
     const steps = 18;
     let step = 0;
     const sweep = () => {
+      if (!alive()) return;
       step++;
       const curX = s.x0 + (s.x1 - s.x0) * (step / steps);
       ctx.strokeStyle = `rgba(${r},${g},${b},0.85)`;
@@ -91,34 +115,39 @@ function animateCheckFill(canvas, inkColor, checked, onDone) {
 function DayBox({ letter, checked, inkColor, isToday, isSelected, onClick }) {
   const canvasRef  = useRef(null);
   const prevChecked = useRef(checked);
+  const sized = useRef(false);
+  // Bumped on every state change / unmount to abort any in-flight animation.
+  const animToken = useRef(0);
+
+  function ensureSized() {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    if (!sized.current) {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width  = Math.round(rect.width  * DPR);
+      canvas.height = Math.round(rect.height * DPR);
+      sized.current = true;
+    }
+    return canvas;
+  }
 
   // Initial paint (no animation)
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width  = Math.round(rect.width  * DPR);
-    canvas.height = Math.round(rect.height * DPR);
-    if (checked) {
-      const ctx = canvas.getContext('2d');
-      const { r, g, b } = hexToRgb(inkColor);
-      const w = canvas.width, h = canvas.height;
-      const total = 7;
-      for (let i = 0; i < total; i++) {
-        const y = h * 0.15 + (h * 0.7) * (i / (total - 1));
-        ctx.strokeStyle = `rgba(${r},${g},${b},0.88)`;
-        ctx.lineWidth = h / (total * 0.88);
-        ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(w * 0.13, y); ctx.lineTo(w * 0.87, y); ctx.stroke();
-      }
-    }
+    const canvas = ensureSized();
+    if (canvas && checked) paintStatic(canvas, inkColor);
+    return () => { animToken.current++; }; // cancel animations on unmount
   }, []);
 
-  // Animate when checked state changes
+  // Redraw whenever the checked state changes. Cancel any previous animation
+  // first so a stale fill can't bleed onto a box that now shows another week.
   useEffect(() => {
+    const canvas = ensureSized();
+    if (!canvas) return;
     if (prevChecked.current === checked) return;
     prevChecked.current = checked;
-    animateCheckFill(canvasRef.current, inkColor, checked, null);
+    const myToken = ++animToken.current;
+    const alive = () => animToken.current === myToken;
+    animateCheckFill(canvas, inkColor, checked, alive, null);
   }, [checked, inkColor]);
 
   return (
