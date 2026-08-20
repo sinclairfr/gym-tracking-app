@@ -14,7 +14,19 @@ export function currentWeekStamp() {
 }
 
 export function todayDayIndex() {
-  return (new Date().getDay() + 6) % 7; // Mon=0 … Sun=6
+  return (new Date().getDay() + 6) % 7; // Mon=0 … Sun=6 — uses the device's local day
+}
+
+// Whole days between a stored check (weekStamp + dayIndex) and "today", computed
+// entirely from the device's local calendar date so the count matches the user's
+// timezone regardless of where the server runs.
+export function daysAgoSince(weekStamp, dayIndex) {
+  if (!weekStamp || dayIndex == null) return null;
+  const monday = weekStampToMonday(weekStamp); // UTC midnight of that week's Monday
+  const checkUTC = Date.UTC(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate() + dayIndex);
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((todayUTC - checkUTC) / 86400000);
 }
 
 // Return the Monday of the given ISO week stamp as a UTC Date

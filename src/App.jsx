@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { api } from './api';
-import { currentWeekStamp, todayDayIndex, navigateWeek, weekRangeLabel } from './weeks';
+import { currentWeekStamp, todayDayIndex, navigateWeek, weekRangeLabel, daysAgoSince } from './weeks';
 import AuthScreen    from './components/AuthScreen';
 import WeekStrip     from './components/WeekStrip';
 import ExerciseLabel from './components/ExerciseLabel';
+import RestTimer     from './components/RestTimer';
 import Toolbar       from './components/Toolbar';
 import './App.css';
 
@@ -56,8 +57,15 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     api.getExercises().then(setExercises).catch(handleApiError);
-    api.getLastWorkout().then(d => setLastWorkoutDays(d.daysAgo)).catch(() => {});
+    refreshLastWorkout();
   }, [user]);
+
+  // Recompute "last workout" from the most recent check, in the device's timezone
+  function refreshLastWorkout() {
+    api.getLastWorkout()
+      .then(d => setLastWorkoutDays(daysAgoSince(d.weekStamp, d.dayIndex)))
+      .catch(() => {});
+  }
 
   // ── Fetch week data whenever user or weekStamp changes ─────────────────────
   useEffect(() => {
@@ -131,21 +139,18 @@ export default function App() {
     try {
       await api.saveStrokes(weekStamp, selectedDay, exIdx, finalStrokes);
 
-      // Auto-check today when drawing on the current day of the current week
-      const today = todayDayIndex();
-      if (isCurrentWeek && selectedDay === today) {
-        const alreadyChecked = weekData[today]?.checked;
-        if (!alreadyChecked) {
-          await api.setDayCheck(weekStamp, today, true);
-          setWeekData(d => ({
-            ...d,
-            [today]: { ...d[today], checked: true },
-          }));
-          setLastWorkoutDays(0);
-        }
+      // Any day that receives a stroke gets its box auto-filled — whatever
+      // week or day is being edited, not only today.
+      if (finalStrokes.length && !weekData[selectedDay]?.checked) {
+        await api.setDayCheck(weekStamp, selectedDay, true);
+        setWeekData(d => ({
+          ...d,
+          [selectedDay]: { ...d[selectedDay], checked: true },
+        }));
+        refreshLastWorkout();
       }
     } catch (err) { handleApiError(err); }
-  }, [weekStamp, selectedDay, isCurrentWeek, weekData]);
+  }, [weekStamp, selectedDay, weekData]);
 
   // ── Undo last stroke ──────────────────────────────────────────────────────────
   const handleUndo = useCallback(async () => {
@@ -184,7 +189,7 @@ export default function App() {
     setWeekData(d => ({ ...d, [dayIdx]: { ...d[dayIdx], checked } }));
     try {
       await api.setDayCheck(weekStamp, dayIdx, checked);
-      api.getLastWorkout().then(d => setLastWorkoutDays(d.daysAgo)).catch(() => {});
+      refreshLastWorkout();
     }
     catch (err) { handleApiError(err); }
   }, [weekStamp]);
@@ -270,6 +275,8 @@ export default function App() {
           onNextWeek={handleNextWeek}
           onGoToday={handleGoToday}
         />
+
+        <RestTimer />
 
         <Toolbar
           inkColor={inkColor}
