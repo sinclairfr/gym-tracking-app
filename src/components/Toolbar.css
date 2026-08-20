@@ -44,6 +44,14 @@
 .action-row {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* On narrow screens let the actions use the full width and wrap neatly
+   instead of overflowing past the right edge. */
+@media (max-width: 419px) {
+  .toolbar-row { justify-content: center; }
+  .action-row { flex: 1 1 100%; justify-content: flex-start; }
 }
 
 .tb-btn {

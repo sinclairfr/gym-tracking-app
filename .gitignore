@@ -1,4 +1,7 @@
 node_modules/
 data.sqlite
+gym.sqlite
+gym.sqlite-shm
+gym.sqlite-wal
 build/
 .env

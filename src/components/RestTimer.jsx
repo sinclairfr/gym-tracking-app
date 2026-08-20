@@ -44,27 +44,40 @@ export default function RestTimer() {
     } catch { return null; }
   }, []);
 
-  // Beep + vibrate when the countdown reaches zero.
+  // Loud alarm-style chime + vibrate when the countdown reaches zero.
   const ring = useCallback(() => {
-    if (navigator.vibrate) { try { navigator.vibrate([160, 70, 160]); } catch { /* ignore */ } }
+    if (navigator.vibrate) { try { navigator.vibrate([200, 90, 200, 90, 200]); } catch { /* ignore */ } }
     if (!soundOn) return;
     const ctx = audioCtxRef.current;
     if (!ctx) return;
     try {
       if (ctx.state === 'suspended') ctx.resume();
-      // Three short rising beeps.
-      [0, 0.22, 0.44].forEach((offset, i) => {
-        const t = ctx.currentTime + offset;
-        const osc = ctx.createOscillator();
+      // A short master limiter keeps it punchy without clipping to silence.
+      const master = ctx.createGain();
+      master.gain.value = 0.9;
+      master.connect(ctx.destination);
+
+      // Four insistent beeps; each is two detuned oscillators (a square for
+      // bite + a sine for body) so it carries over phone speakers.
+      const beeps = [880, 880, 1175, 1175];
+      beeps.forEach((freq, i) => {
+        const t = ctx.currentTime + i * 0.26;
         const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.value = 660 + i * 220;
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.start(t);
-        osc.stop(t + 0.2);
+        gain.gain.exponentialRampToValueAtTime(0.95, t + 0.015);
+        gain.gain.setValueAtTime(0.95, t + 0.16);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+        gain.connect(master);
+
+        const sq = ctx.createOscillator();
+        sq.type = 'square';
+        sq.frequency.value = freq;
+        const si = ctx.createOscillator();
+        si.type = 'sine';
+        si.frequency.value = freq;
+        sq.connect(gain); si.connect(gain);
+        sq.start(t); si.start(t);
+        sq.stop(t + 0.25); si.stop(t + 0.25);
       });
     } catch { /* audio not available */ }
   }, [soundOn]);
