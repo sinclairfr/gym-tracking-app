@@ -143,7 +143,7 @@ export default function RestTimer() {
           <button className="rt-btn rt-adjust" onClick={() => adjust(STEP)} disabled={running} aria-label="plus 15s">+</button>
           <button className="rt-btn" onClick={reset} aria-label="réinitialiser">↺</button>
           <button
-            className={`rt-btn rt-sound ${soundOn ? 'active' : ''}`}
+            className={`rt-btn rt-sound ${soundOn ? 'on' : 'off'}`}
             onClick={() => { setSoundOn(v => !v); ensureAudio(); }}
             aria-label={soundOn ? 'couper le son' : 'activer le son'}
             title={soundOn ? 'son activé' : 'son coupé'}
