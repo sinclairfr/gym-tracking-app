@@ -100,13 +100,14 @@ export default function App() {
   }
 
   // ── Week navigation ──────────────────────────────────────────────────────────
+  // Keep the same weekday selected when moving between weeks so the drawings on
+  // the current day stay visible after navigating away and back — resetting to
+  // Monday made a day's strokes appear lost.
   function handlePrevWeek() {
     setWeekStamp(s => navigateWeek(s, -1));
-    setSelectedDay(0); // Monday
   }
   function handleNextWeek() {
     setWeekStamp(s => navigateWeek(s, 1));
-    setSelectedDay(0);
   }
   function handleGoToday() {
     setWeekStamp(currentWeekStamp());
