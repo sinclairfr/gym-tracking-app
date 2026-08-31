@@ -1,7 +1,25 @@
 // MarkerCanvas — freehand drawing with organic marker physics + ink drying animation
 import React, { useRef, useEffect, useCallback } from 'react';
 
-const DPR = window.devicePixelRatio || 1;
+// Live device-pixel-ratio. Read at render time (not once at module load) so the
+// canvas stays crisp if the window moves between monitors of different density.
+function getDpr() {
+  return window.devicePixelRatio || 1;
+}
+
+// Points are stored in NORMALIZED canvas coordinates (x, y in [0,1] relative to
+// the canvas CSS box) so a drawing renders identically across devices whatever
+// their pixel density or label width. New strokes carry `norm: true`.
+//
+// Legacy strokes were stored in absolute device pixels (CSS × the drawing
+// device's DPR). They lack `norm`, so we render them the old way — no
+// migration, no regression — while every new stroke is resolution-independent.
+function strokeX(stroke, pt, canvas) {
+  return stroke.norm ? pt.x * canvas.width : pt.x;
+}
+function strokeY(stroke, pt, canvas) {
+  return stroke.norm ? pt.y * canvas.height : pt.y;
+}
 
 // Parse hex color → {r, g, b}
 function hexToRgb(hex) {
@@ -10,18 +28,24 @@ function hexToRgb(hex) {
 }
 
 // Draw a single segment from strokes array with organic marker texture
-function drawSegment(ctx, stroke, fromIdx) {
+function drawSegment(ctx, canvas, stroke, fromIdx) {
   const pts = stroke.points;
   if (pts.length < 2 || fromIdx < 1) return;
+
+  const dpr = getDpr();
+  const x0 = strokeX(stroke, pts[fromIdx - 1], canvas);
+  const y0 = strokeY(stroke, pts[fromIdx - 1], canvas);
+  const x1 = strokeX(stroke, pts[fromIdx], canvas);
+  const y1 = strokeY(stroke, pts[fromIdx], canvas);
 
   if (stroke.erase) {
     ctx.globalCompositeOperation = 'destination-out';
     ctx.strokeStyle = 'rgba(0,0,0,1)';
-    ctx.lineWidth = 18 * DPR;
+    ctx.lineWidth = 18 * dpr;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(pts[fromIdx - 1].x, pts[fromIdx - 1].y);
-    ctx.lineTo(pts[fromIdx].x, pts[fromIdx].y);
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
     ctx.stroke();
     ctx.globalCompositeOperation = 'source-over';
     return;
@@ -29,7 +53,7 @@ function drawSegment(ctx, stroke, fromIdx) {
 
   const { r, g, b } = hexToRgb(stroke.color);
   const p = pts[fromIdx].p;
-  const baseW = (stroke.width + p * 2.5) * DPR;
+  const baseW = (stroke.width + p * 2.5) * dpr;
 
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -39,19 +63,19 @@ function drawSegment(ctx, stroke, fromIdx) {
   ctx.strokeStyle = `rgba(${r},${g},${b},0.82)`;
   ctx.lineWidth = baseW;
   ctx.beginPath();
-  ctx.moveTo(pts[fromIdx - 1].x, pts[fromIdx - 1].y);
-  ctx.lineTo(pts[fromIdx].x, pts[fromIdx].y);
+  ctx.moveTo(x0, y0);
+  ctx.lineTo(x1, y1);
   ctx.stroke();
 
   // Feathered edge — lighter, slightly wider, offset
   if (Math.random() > 0.35) {
-    const ox = (Math.random() - 0.5) * DPR * 1.5;
-    const oy = (Math.random() - 0.5) * DPR * 0.8;
+    const ox = (Math.random() - 0.5) * dpr * 1.5;
+    const oy = (Math.random() - 0.5) * dpr * 0.8;
     ctx.strokeStyle = `rgba(${Math.min(r + 70, 255)},${Math.min(g + 70, 255)},${Math.min(b + 70, 255)},0.18)`;
     ctx.lineWidth = baseW * 1.5;
     ctx.beginPath();
-    ctx.moveTo(pts[fromIdx - 1].x + ox, pts[fromIdx - 1].y + oy);
-    ctx.lineTo(pts[fromIdx].x + ox, pts[fromIdx].y + oy);
+    ctx.moveTo(x0 + ox, y0 + oy);
+    ctx.lineTo(x1 + ox, y1 + oy);
     ctx.stroke();
   }
 
@@ -60,8 +84,8 @@ function drawSegment(ctx, stroke, fromIdx) {
     ctx.strokeStyle = `rgba(${Math.max(r - 40, 0)},${Math.max(g - 40, 0)},${Math.max(b - 40, 0)},0.45)`;
     ctx.lineWidth = baseW * 0.3;
     ctx.beginPath();
-    ctx.moveTo(pts[fromIdx - 1].x, pts[fromIdx - 1].y);
-    ctx.lineTo(pts[fromIdx].x, pts[fromIdx].y);
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
     ctx.stroke();
   }
 }
@@ -73,7 +97,7 @@ function redrawAll(canvas, strokes) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (const stroke of strokes) {
     for (let i = 1; i < stroke.points.length; i++) {
-      drawSegment(ctx, stroke, i);
+      drawSegment(ctx, canvas, stroke, i);
     }
   }
 }
@@ -102,16 +126,17 @@ function animateDrying(canvas, strokes, onDone) {
     // Overlay wet sheen on last stroke
     if (wetOpacity > 0.01) {
       const ctx = canvas.getContext('2d');
+      const dpr = getDpr();
       ctx.globalCompositeOperation = 'source-over';
       for (let i = 1; i < last.points.length; i++) {
         const p0 = last.points[i - 1];
         const p1 = last.points[i];
         ctx.strokeStyle = `rgba(${Math.min(r + 80, 255)},${Math.min(g + 80, 255)},${Math.min(b + 100, 255)},${wetOpacity})`;
-        ctx.lineWidth = (last.width + p1.p * 2) * DPR * 1.8;
+        ctx.lineWidth = (last.width + p1.p * 2) * dpr * 1.8;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(p0.x, p0.y);
-        ctx.lineTo(p1.x, p1.y);
+        ctx.moveTo(strokeX(last, p0, canvas), strokeY(last, p0, canvas));
+        ctx.lineTo(strokeX(last, p1, canvas), strokeY(last, p1, canvas));
         ctx.stroke();
       }
     }
@@ -146,8 +171,9 @@ export default function MarkerCanvas({ strokes, onStrokesChange, onStrokeEnd, in
     if (!canvas) return;
     const ro = new ResizeObserver(() => {
       const rect = canvas.getBoundingClientRect();
-      canvas.width = Math.round(rect.width * DPR);
-      canvas.height = Math.round(rect.height * DPR);
+      const dpr = getDpr();
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
       redrawAll(canvas, strokesRef.current);
     });
     ro.observe(canvas);
@@ -175,13 +201,17 @@ export default function MarkerCanvas({ strokes, onStrokesChange, onStrokeEnd, in
     };
   }, []);
 
+  // Pointer position in normalized [0,1] canvas coordinates (device- and
+  // size-independent). Guards against a zero-sized rect during layout.
   const getPos = useCallback((e) => {
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const src = e.touches ? e.touches[0] : e;
+    const w = rect.width || 1;
+    const h = rect.height || 1;
     return {
-      x: (src.clientX - rect.left) * DPR,
-      y: (src.clientY - rect.top) * DPR
+      x: (src.clientX - rect.left) / w,
+      y: (src.clientY - rect.top) / h
     };
   }, []);
 
@@ -203,6 +233,7 @@ export default function MarkerCanvas({ strokes, onStrokesChange, onStrokeEnd, in
       color: eraseMode ? null : inkColor,
       erase: eraseMode,
       width: eraseMode ? 8 : 2.2 + Math.random() * 0.8,
+      norm: true,
       points: [{ ...pos, p: pressureRef.current }]
     };
 
@@ -213,9 +244,13 @@ export default function MarkerCanvas({ strokes, onStrokesChange, onStrokeEnd, in
   const onMove = useCallback((e) => {
     if (!drawingRef.current || !currentStrokeRef.current) return;
     e.preventDefault();
+    const canvas = canvasRef.current;
     const pos = getPos(e);
-    const dist = Math.hypot(pos.x - lastPosRef.current.x, pos.y - lastPosRef.current.y);
-    if (dist < 1.5) return;
+    // Minimum-travel filter measured in device pixels, independent of the
+    // normalized coordinate space, so it behaves the same on every canvas size.
+    const dx = (pos.x - lastPosRef.current.x) * canvas.width;
+    const dy = (pos.y - lastPosRef.current.y) * canvas.height;
+    if (Math.hypot(dx, dy) < 1.5) return;
 
     pressureRef.current += (Math.random() - 0.5) * 0.12;
     pressureRef.current = Math.max(0.15, Math.min(0.95, pressureRef.current));
@@ -225,7 +260,7 @@ export default function MarkerCanvas({ strokes, onStrokesChange, onStrokeEnd, in
 
     // Incremental draw — just the new segment
     const pts = currentStrokeRef.current.points;
-    drawSegment(canvasRef.current.getContext('2d'), currentStrokeRef.current, pts.length - 1);
+    drawSegment(canvas.getContext('2d'), canvas, currentStrokeRef.current, pts.length - 1);
   }, [getPos]);
 
   const onEnd = useCallback((e) => {
